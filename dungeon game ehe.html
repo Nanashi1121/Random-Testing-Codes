@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dungeon Adventure</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #282c34;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #61dafb;
+            margin-bottom: 20px;
+        }
+        #output {
+            background: #333;
+            padding: 15px;
+            border: 2px solid #61dafb;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 600px;
+            overflow-y: auto;
+            height: 300px;
+            margin-bottom: 15px;
+        }
+        #input {
+            width: 100%;
+            max-width: 600px;
+            padding: 10px;
+            border: 2px solid #61dafb;
+            border-radius: 5px;
+            background-color: #444;
+            color: #ffffff;
+        }
+        #submit {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #61dafb;
+            color: #282c34;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        #submit:hover {
+            background-color: #21a1f1;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dungeon Adventure</h1>
+    <pre id="output"></pre>
+    <input type="text" id="input" placeholder="Type your action..." />
+    <button id="submit">Submit</button>
+
+    <script>
+        const output = document.getElementById("output");
+        const input = document.getElementById("input");
+        const submit = document.getElementById("submit");
+
+        const rooms = {
+            start: {
+                description: "You are in a dimly lit dungeon. Doors lead north and east.",
+                options: { north: "npcRoom", east: "monsterRoom" },
+            },
+            npcRoom: {
+                description: "You meet a wandering NPC named Greg who offers advice.",
+                dialogue: [
+                    "Beware of the monster lurking ahead!",
+                    "Treasure awaits you, but be cautious!",
+                    "I lost my magic key in the treasure room.",
+                ],
+                options: { ask: "npcTalk", back: "start" },
+            },
+            monsterRoom: {
+                description: "A fierce monster blocks your way! You can fight or flee.",
+                options: { fight: "fightMonster", flee: "start" },
+            },
+            treasureRoom: {
+                description: "You found a treasure room! Glimmering coins and a magical potion await. You can take them or go back.",
+                options: { take: "win", back: "start" },
+            },
+            secretRoom: {
+                description: "You've discovered a secret chamber! It contains an ancient artifact.",
+                options: { take: "artifact", back: "treasureRoom" },
+            },
+            fightMonster: {
+                description: "You engage the monster in combat!",
+                options: { attack: "continueFight", flee: "start" },
+            },
+            continueFight: {
+                description: "You can attack again or use a potion!",
+                options: { attack: "fightMonster", potion: "usePotion", flee: "start" },
+            },
+            defeat: {
+                description: "You were defeated by the monster. Game over. Type 'restart' to try again.",
+                options: {},
+            },
+            win: {
+                description: "Congratulations! You've collected the treasure and won the game! Type 'restart' to play again.",
+                options: {},
+            },
+            artifact: {
+                description: "You obtained the ancient artifact! You feel its power coursing through you.",
+                options: { back: "win" },
+            },
+        };
+
+        let currentRoom = "start";
+        let playerHealth = 100;
+        let monsterHealth = 50;
+        let potions = 1; // Player starts with one potion
+
+        function getRandomDialogue() {
+            const dialogues = rooms.npcRoom.dialogue;
+            return dialogues[Math.floor(Math.random() * dialogues.length)];
+        }
+
+        function displayStats() {
+            output.textContent += `\n\nYour stats: Health: ${playerHealth}, Monster Health: ${monsterHealth}, Potions: ${potions}`;
+        }
+
+        function displayRoom() {
+            const room = rooms[currentRoom];
+            output.textContent = room.description;
+
+            if (currentRoom === "npcRoom") {
+                output.textContent += `\n\nGreg says: "${getRandomDialogue()}"`;
+            }
+
+            displayStats();
+            output.textContent += "\n\nAvailable actions: " + Object.keys(room.options).join(", ");
+        }
+
+        function fight() {
+            const playerAttack = Math.floor(Math.random() * 30) + 10; // Player damage
+            monsterHealth -= playerAttack;
+            output.textContent += `\nYou attack the monster and deal ${playerAttack} damage! Monster health: ${monsterHealth}`;
+
+            if (monsterHealth <= 0) {
+                output.textContent += "\nYou defeated the monster!";
+                currentRoom = "treasureRoom";
+                monsterHealth = 50; // Reset monster health for the next encounter
+                return displayRoom();
+            }
+
+            const monsterAttack = Math.floor(Math.random() * 20) + 5; // Monster damage
+            playerHealth -= monsterAttack;
+            output.textContent += `\nThe monster attacks you and deals ${monsterAttack} damage! Your health: ${playerHealth}`;
+
+            if (playerHealth <= 0) {
+                currentRoom = "defeat";
+            }
+            displayRoom();
+        }
+
+        function usePotion() {
+            if (potions > 0) {
+                playerHealth += 30; // Heal 30 health
+                potions--;
+                output.textContent += `\nYou used a potion! Your health is now: ${playerHealth}`;
+            } else {
+                output.textContent += "\nYou have no potions left!";
+            }
+            currentRoom = "fightMonster"; // Return to fight after using potion
+            displayRoom();
+        }
+
+        function handleInput() {
+            const action = input.value.toLowerCase();
+            input.value = '';
+
+            if (currentRoom === "defeat" || currentRoom === "win") {
+                if (action === "restart") {
+                    currentRoom = "start";
+                    playerHealth = 100;
+                    monsterHealth = 50;
+                    potions = 1; // Reset potions
+                } else {
+                    output.textContent += "\n\nType 'restart' to play again.";
+                    return;
+                }
+            } else if (currentRoom === "fightMonster" && action === "attack") {
+                fight();
+                return;
+            } else if (currentRoom === "continueFight" && action === "potion") {
+                usePotion();
+                return;
+            } else if (rooms[currentRoom].options[action]) {
+                currentRoom = rooms[currentRoom].options[action];
+                if (currentRoom === "treasureRoom" && Math.random() < 0.5) {
+                    currentRoom = "secretRoom"; // Randomly send player to the secret room
+                }
+            } else {
+                output.textContent += "\n\nInvalid action! Try again.";
+                return;
+            }
+            displayRoom();
+        }
+
+        submit.addEventListener("click", handleInput);
+        input.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") handleInput();
+        });
+
+        displayRoom();
+    </script>
+</body>
+</html>
